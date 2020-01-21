@@ -244,7 +244,19 @@ class ModelExercise(Exercise):
                         "problem within the set time limit."
                     )
                 else:
-                    checked = self.run_checker(str(result), data, thresholds)
+                    try:
+                        checked = self.run_checker(str(result), data, thresholds)
+                    except MiniZincError as err:
+                        logging.error(f"An error occurred while running the checker:\n{err}")
+                        return Feedback(
+                            feedback=(
+                                "An error occurred while checking your "
+                                "solution.\n\nCheck your output statement and make "
+                                "sure it meets the requirements of the assignment. If "
+                                "the problem persists, then please ask your course "
+                                "instructor for help."
+                            ),
+                        )
                     if not checked["correct"]:
                         logging.warning(f"Solution checker reported errors! Stop grading")
                         return Feedback.from_dict(checked)
