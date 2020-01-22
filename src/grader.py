@@ -7,12 +7,14 @@ import sys
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field, fields
 from datetime import timedelta
+from json import JSONDecodeError
 from pathlib import Path
 from statistics import mean
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, List, Optional, Tuple
 
-from minizinc import Solver, Instance, Status, MiniZincError, Method, Model
+from minizinc import Instance, Method, MiniZincError, Model, Solver, Status
+from minizinc.CLI import CLIInstance
 
 ERROR = (
     "An error occurred within the grader, please inform your course "
@@ -152,7 +154,11 @@ class SolutionExercise(Exercise):
 
         # Split solutions
         raw = re.sub(rb"^\w*%.*\n?", b"", raw, flags=re.MULTILINE)
-        raw = re.sub(rb"=====[^=]*=====", b"", raw)
+        raw = re.sub(
+            rb"={5}(ERROR|UNKNOWN|UNSATISFIABLE|UNSATorUNBOUNDED|UNBOUNDED|)?={5}",
+            b"",
+            raw,
+        )
         solutions = [
             sol.strip() for sol in raw.split(b"----------") if sol.strip() != b""
         ]
@@ -189,12 +195,17 @@ class ModelExercise(Exercise):
 
             solver = Solver.lookup(self.solver)
             instance = Instance(solver, Model(model))
+            assert isinstance(instance, CLIInstance)
 
             scores: List[float] = []
             feedback: List[str] = []
             for (data, thresholds) in self.instance_thresholds:
                 with instance.branch() as child:
                     child.add_file(data, parse_data=False)
+                    if "_output_item" not in child.output:
+                        child.add_file(self.checker)
+                        child.add_string("array[int] of float: thresholds;")
+                        child["thresholds"] = thresholds
                     try:
                         logging.info(f"Running submitted model with data file `{data}`")
                         result = child.solve(timeout=self.timeout)
@@ -245,9 +256,16 @@ class ModelExercise(Exercise):
                     )
                 else:
                     try:
-                        checked = self.run_checker(str(result), data, thresholds)
-                    except MiniZincError as err:
-                        logging.error(f"An error occurred while running the checker:\n{err}")
+                        if "_output_item" in instance.output:
+                            solution = str(result.solution)
+                            checked = self.run_checker(solution, data, thresholds)
+                        else:
+                            logging.debug(f"Checker output:\n{result.solution.check()}")
+                            checked = json.loads(result.solution.check())
+                    except (MiniZincError, JSONDecodeError) as err:
+                        logging.error(
+                            f"An error occurred while running the checker:\n{err}"
+                        )
                         return Feedback(
                             feedback=(
                                 "An error occurred while checking your "
@@ -258,7 +276,9 @@ class ModelExercise(Exercise):
                             ),
                         )
                     if not checked["correct"]:
-                        logging.warning(f"Solution checker reported errors! Stop grading")
+                        logging.warning(
+                            f"Solution checker reported errors! Stop grading"
+                        )
                         return Feedback.from_dict(checked)
                     else:
                         scores.append(checked["fractionalScore"])
