@@ -68,13 +68,14 @@ class Exercise(ABC):
 
             return SolutionExercise(**args)
         else:
-            args["instance_thresholds"] = [
-                (
-                    (root / vals["data"][j]).absolute(),
-                    [float(k) for k in vals["thresholds"][j]],
-                )
-                for j in range(len(vals["data"]))
-            ]
+            args["instances"] = []
+            for inst in vals["instances"]:
+                nargs = inst.copy()
+                if "data" in nargs:
+                    nargs["data"] = (root / inst["data"]).absolute()
+                if "thresholds" in nargs:
+                    nargs["thresholds"] = [float(j) for j in inst["thresholds"]]
+                args["instances"].append(ModelInstance(**nargs))
 
             return ModelExercise(**args)
 
@@ -112,10 +113,14 @@ class Exercise(ABC):
 
 
 @dataclass
-class SolutionExercise(Exercise):
+class ModelInstance:
+    UNSAT: bool = False
     data: Optional[Path] = None
     thresholds: List[float] = field(default_factory=list)
 
+
+@dataclass
+class SolutionExercise(ModelInstance, Exercise):
     def grade(self, submission: Path) -> Feedback:
         logging.info(f"Grading solution exercise `{self.name}`")
         raw = submission.read_bytes()
@@ -135,14 +140,23 @@ class SolutionExercise(Exercise):
             )
         elif status in [Status.UNBOUNDED, Status.UNSATISFIABLE]:
             logging.error(f"Submission contained the UNSAT/UNBOUNDED status")
-            return Feedback(
-                feedback=(
-                    "Your model reported the problem as unsatisfiable, but the "
-                    "problem is satisfiable.\n\nPlease ensure that your model "
-                    "contains only the constraints that are part of the model "
-                    "description."
+            if self.UNSAT:
+                return Feedback(
+                    fractionalScore=1.0,
+                    feedback=(
+                        "Congratulations! Your model correctly proved that the "
+                        "problem instance is unsatisfiable. "
+                    ),
                 )
-            )
+            else:
+                return Feedback(
+                    feedback=(
+                        "Your model reported the problem as unsatisfiable, but the "
+                        "problem is satisfiable.\n\nPlease ensure that your model "
+                        "contains only the constraints that are part of the model "
+                        "description."
+                    )
+                )
         elif status is Status.UNKNOWN:
             logging.error(f"Submission contained the UNKNOWN status")
             return Feedback(
@@ -184,8 +198,7 @@ class SolutionExercise(Exercise):
 
 @dataclass
 class ModelExercise(Exercise):
-    instance_thresholds: List[Tuple[Path, List[float]]] = field(default_factory=list)
-    timeout: timedelta = timedelta(seconds=60)
+    instances: List[ModelInstance] = field(default_factory=list)
 
     def grade(self, submission: Path) -> Feedback:
         logging.info(f"Grading model exercise `{self.name}`")
@@ -199,15 +212,17 @@ class ModelExercise(Exercise):
 
             scores: List[float] = []
             feedback: List[str] = []
-            for (data, thresholds) in self.instance_thresholds:
+            for inst in self.instances:
                 with instance.branch() as child:
-                    child.add_file(data, parse_data=False)
+                    child.add_file(inst.data, parse_data=False)
                     if "_output_item" not in child.output:
                         child.add_file(self.checker)
                         child.add_string("array[int] of float: thresholds;")
-                        child["thresholds"] = thresholds
+                        child["thresholds"] = inst.thresholds
                     try:
-                        logging.info(f"Running submitted model with data file `{data}`")
+                        logging.info(
+                            f"Running submitted model with data file `{inst.data}`"
+                        )
                         result = child.solve(timeout=self.timeout)
                     except MiniZincError as err:
                         logging.error(
@@ -224,7 +239,9 @@ class ModelExercise(Exercise):
                         )
 
                 if result.status is Status.ERROR:
-                    logging.error(f"Submission with {data} contained the ERROR status")
+                    logging.error(
+                        f"Submission with {inst.data} contained the ERROR status"
+                    )
                     return Feedback(
                         feedback=(
                             "An error occurred while solving your model.\n\nEnsure "
@@ -237,18 +254,27 @@ class ModelExercise(Exercise):
                     )
                 elif result.status in [Status.UNBOUNDED, Status.UNSATISFIABLE]:
                     logging.error(
-                        f"Submission with {data} returned the UNSAT/UNBOUNDED status"
+                        f"Submission with {inst.data} returned the UNSAT/UNBOUNDED status"
                     )
-                    return Feedback(
-                        feedback=(
-                            "Your model reported the problem as unsatisfiable, but the "
-                            "problem is satisfiable.\n\nPlease ensure that your model "
-                            "contains only the constraints that are part of the model "
-                            "description."
+                    if inst.UNSAT:
+                        scores.append(1.0)
+                        feedback.append(
+                            "Congratulations! Your model correctly proved that the "
+                            "problem instance is unsatisfiable. "
                         )
-                    )
+                    else:
+                        return Feedback(
+                            feedback=(
+                                "Your model reported the problem as unsatisfiable, but the "
+                                "problem is satisfiable.\n\nPlease ensure that your model "
+                                "contains only the constraints that are part of the model "
+                                "description."
+                            )
+                        )
                 elif result.status is Status.UNKNOWN:
-                    logging.error(f"Submission with {data} returned the UNKNOWN status")
+                    logging.error(
+                        f"Submission with {inst.data} returned the UNKNOWN status"
+                    )
                     scores.append(0.0)
                     feedback.append(
                         "Your submission is unable to find a feasible solution to the "
@@ -258,7 +284,9 @@ class ModelExercise(Exercise):
                     try:
                         if "_output_item" in instance.output:
                             solution = str(result.solution)
-                            checked = self.run_checker(solution, data, thresholds)
+                            checked = self.run_checker(
+                                solution, inst.data, inst.thresholds
+                            )
                         else:
                             logging.debug(f"Checker output:\n{result.solution.check()}")
                             checked = json.loads(result.solution.check())
