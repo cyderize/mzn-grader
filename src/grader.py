@@ -315,7 +315,7 @@ class ModelExercise(Exercise):
         feedback_str = "\n".join(
             [
                 "#### "
-                + self.instance_thresholds[i][0].name.upper()
+                + self.instances[i].data.name.upper()
                 + " - "
                 + str(int(scores[i] * 100))
                 + "% ####\n"
