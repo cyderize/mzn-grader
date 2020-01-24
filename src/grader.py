@@ -11,7 +11,7 @@ from json import JSONDecodeError
 from pathlib import Path
 from statistics import mean
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from minizinc import Instance, Method, MiniZincError, Model, Solver, Status
 from minizinc.CLI import CLIInstance
@@ -58,7 +58,7 @@ class Exercise(ABC):
         root = Path(parent.get("root", "."))
         args["checker"] = (root / args["checker"]).absolute()
         if "timeout" in vals:
-            args["timeout"] = timedelta(milliseconds=vals["timeout"])
+            args["timeout"] = timedelta(seconds=vals["timeout"])
 
         if sol_exercise:
             if "data" in vals:
