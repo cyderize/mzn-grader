@@ -53,7 +53,7 @@ class Exercise(ABC):
         args = {
             k: v
             for k, v in vals.items()
-            if k in ["name", "checker", "objective", "solver"]
+            if k in ["name", "checker", "objective", "solver", "UNSAT"]
         }
         root = Path(parent.get("root", "."))
         args["checker"] = (root / args["checker"]).absolute()
