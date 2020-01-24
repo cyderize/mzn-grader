@@ -213,30 +213,30 @@ class ModelExercise(Exercise):
             scores: List[float] = []
             feedback: List[str] = []
             for inst in self.instances:
-                with instance.branch() as child:
-                    child.add_file(inst.data, parse_data=False)
-                    if "_output_item" not in child.output:
-                        child.add_file(self.checker)
-                        child.add_string("array[int] of float: thresholds;")
-                        child["thresholds"] = inst.thresholds
-                    try:
-                        logging.info(
-                            f"Running submitted model with data file `{inst.data}`"
-                        )
-                        result = child.solve(timeout=self.timeout)
-                    except MiniZincError as err:
-                        logging.error(
-                            f"An error occurred while running the model submission:\n {err}"
-                        )
-                        return Feedback(
-                            feedback=(
-                                "An error occurred while solving your "
-                                "model.\n\nPlease ensure that your MiniZinc model "
-                                "compiles correctly and works for all provided "
-                                "instances. If the problem persists, then please ask "
-                                "your course instructor for help."
-                            ),
-                        )
+                try:
+                    with instance.branch() as child:
+                        child.add_file(inst.data, parse_data=False)
+                        if "_output_item" not in child.output:
+                            child.add_file(self.checker)
+                            child.add_string("array[int] of float: thresholds;")
+                            child["thresholds"] = inst.thresholds
+                            logging.info(
+                                f"Running submitted model with data file `{inst.data}`"
+                            )
+                            result = child.solve(timeout=self.timeout)
+                except MiniZincError as err:
+                    logging.error(
+                        f"An error occurred while running the model submission:\n {err}"
+                    )
+                    return Feedback(
+                        feedback=(
+                            "An error occurred while solving your "
+                            "model.\n\nPlease ensure that your MiniZinc model "
+                            "compiles correctly and works for all provided "
+                            "instances. If the problem persists, then please ask "
+                            "your course instructor for help."
+                        ),
+                    )
 
                 if result.status is Status.ERROR:
                     logging.error(
