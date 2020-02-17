@@ -18,7 +18,7 @@ from minizinc.CLI import CLIInstance
 
 ERROR = (
     "An error occurred within the grader, please inform your course "
-    "instructor.\n\n The course instructor will need to for which "
+    "instructor.\n\nThe course instructor will need to for which "
     "assignment the error occurred, and at what time you made your "
     "submission. Thank you for your help and your patience. We hope to "
     "prevent these issues from happening in the future."
@@ -145,7 +145,7 @@ class SolutionExercise(ModelInstance, Exercise):
                     fractionalScore=1.0,
                     feedback=(
                         "Congratulations! Your model correctly proved that the "
-                        "problem instance is unsatisfiable. "
+                        "problem instance is unsatisfiable."
                     ),
                 )
             else:
@@ -226,7 +226,7 @@ class ModelExercise(Exercise):
                             result = child.solve(timeout=self.timeout)
                 except MiniZincError as err:
                     logging.error(
-                        f"An error occurred while running the model submission:\n {err}"
+                        f"An error occurred while running the model submission:\n{err}"
                     )
                     return Feedback(
                         feedback=(
