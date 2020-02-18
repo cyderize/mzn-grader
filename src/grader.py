@@ -178,10 +178,12 @@ class SolutionExercise(ModelInstance, Exercise):
         ]
         if len(solutions) < 1:
             return Feedback(
-                feedback="The found solution appears to be empty.\n\nCheck your "
-                         "output statement and make sure it meets the requirements of "
-                         "the assignment. If the problem persists, then please ask "
-                         "your course instructor for help. "
+                feedback=(
+                    "The found solution appears to be empty.\n\nCheck your "
+                    "output statement and make sure it meets the requirements of "
+                    "the assignment. If the problem persists, then please ask "
+                    "your course instructor for help. "
+                )
             )
 
         try:
