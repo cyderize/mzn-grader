@@ -80,7 +80,7 @@ class Exercise(ABC):
             return ModelExercise(**args)
 
     def run_checker(
-        self, submission: str, data: Optional[Path], thresholds: List[float]
+        self, submission: str, data: Optional[Path], thresholds: Optional[List[float]]
     ) -> Dict[str, Any]:
         logging.info(f"Run {self.checker} with solution data:\n{submission}")
         solver = Solver.lookup(self.solver)
@@ -92,7 +92,7 @@ class Exercise(ABC):
             instance.add_file(self.checker)
             if data is not None:
                 instance.add_file(data, parse_data=False)
-            if len(thresholds) > 0:
+            if thresholds is not None:
                 instance["thresholds"] = thresholds
             instance.add_file(solution, parse_data=False)
 
@@ -116,7 +116,7 @@ class Exercise(ABC):
 class ModelInstance:
     UNSAT: bool = False
     data: Optional[Path] = None
-    thresholds: List[float] = field(default_factory=list)
+    thresholds: Optional[List[float]] = None
 
 
 @dataclass
