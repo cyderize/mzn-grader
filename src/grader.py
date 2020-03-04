@@ -88,7 +88,7 @@ class Exercise(ABC):
         self, submission: str, data: Optional[Path], thresholds: Optional[List[float]]
     ) -> Dict[str, Any]:
         logging.info(f"Run {self.checker} with solution data:\n{submission}")
-        solver = Solver.lookup(self.solver)
+        solver = Solver.lookup("gecode")
         with NamedTemporaryFile(prefix="submission", suffix=".dzn") as temp:
             solution = Path(temp.name)
             solution.write_text(submission)
