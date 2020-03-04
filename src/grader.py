@@ -24,6 +24,11 @@ ERROR = (
     "prevent these issues from happening in the future."
 )
 
+GRADER_LAPSE = (
+    "The grader marked a solution for this instance as correct, but it was marked as "
+    "unsatisfiable. "
+)
+
 
 @dataclass
 class Feedback:
@@ -201,6 +206,7 @@ class SolutionExercise(ModelInstance, Exercise):
                 ),
             )
 
+        assert not (result["correct"] and self.UNSAT), GRADER_LAPSE
         return Feedback.from_dict(result)
 
 
@@ -319,6 +325,7 @@ class ModelExercise(Exercise):
                         )
                         return Feedback.from_dict(checked)
                     else:
+                        assert not inst.UNSAT, GRADER_LAPSE
                         scores.append(checked["fractionalScore"])
                         feedback.append(checked["feedback"])
 
