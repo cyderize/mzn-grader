@@ -171,6 +171,7 @@ class SolutionExercise(ModelInstance, Exercise):
                 ),
             )
 
+        logging.info(f"Submission contained the {status} status")
         # Split solutions
         raw = re.sub(rb"^\w*%.*\n?", b"", raw, flags=re.MULTILINE)
         raw = re.sub(
@@ -297,6 +298,9 @@ class ModelExercise(Exercise):
                         "problem within the set time limit."
                     )
                 else:
+                    logging.info(
+                        f"Submission with {inst.data} returned the {result.status} status"
+                    )
                     try:
                         if "_output_item" in instance.output:
                             solution = str(result.solution)
