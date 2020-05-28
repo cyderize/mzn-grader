@@ -222,7 +222,21 @@ class ModelExercise(Exercise):
             model.write_bytes(submission.read_bytes())
 
             solver = Solver.lookup(self.solver)
-            instance = Instance(solver, Model(model))
+            try:
+                instance = Instance(solver, Model(model))
+            except MiniZincError as err:
+                logging.error(
+                    f"An error occurred while running the model submission:\n{err}"
+                )
+                return Feedback(
+                    feedback=(
+                        "An error occurred while solving your "
+                        "model.\n\nPlease ensure that your MiniZinc model "
+                        "compiles correctly and works for all provided "
+                        "instances. If the problem persists, then please ask "
+                        "your course instructor for help."
+                    ),
+                )
             assert isinstance(instance, CLIInstance)
 
             scores: List[float] = []
