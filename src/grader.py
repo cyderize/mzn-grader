@@ -16,12 +16,61 @@ from typing import Any, Dict, List, Optional
 from minizinc import Instance, Method, MiniZincError, Model, Solver, Status
 from minizinc.CLI import CLIInstance
 
-ERROR = (
+
+EMPTY_ERROR = (
+    "The found solution appears to be empty.\n\nCheck your "
+    "output statement and make sure it meets the requirements of "
+    "the assignment. If the problem persists, then please ask "
+    "your course instructor for help. "
+)
+
+GRADER_ERROR = (
     "An error occurred within the grader, please inform your course "
     "instructor.\n\nThe course instructor will need to for which "
     "assignment the error occurred, and at what time you made your "
     "submission. Thank you for your help and your patience. We hope to "
     "prevent these issues from happening in the future."
+)
+
+MODEL_ERROR = (
+    "An error occurred while solving your "
+    "model.\n\nPlease ensure that your MiniZinc model "
+    "compiles correctly and works for all provided "
+    "instances. If the problem persists, then please ask "
+    "your course instructor for help."
+)
+
+SOLUTION_ERROR = (
+    "An error occurred while solving your model.\n\nEnsure that your "
+    "model does not contain any elements that are not supported by "
+    "the solver and check that your model returns no error message "
+    "when running locally. If the problem persists, then please ask "
+    "your course instructor for help."
+)
+
+UNSAT_ERROR = (
+    "Your model reported the problem as unsatisfiable, but the "
+    "problem is satisfiable.\n\nPlease ensure that your model "
+    "contains only the constraints that are part of the model "
+    "description."
+)
+
+OUTPUT_ERROR = (
+    "An error occurred while checking your "
+    "solution.\n\nCheck your output statement and make "
+    "sure it meets the requirements of the assignment. If "
+    "the problem persists, then please ask your course "
+    "instructor for help."
+)
+
+UNKNOWN_MSG = (
+    "Your submission is unable to find a feasible "
+    "solution to the problem within the set time limit."
+)
+
+UNSAT_MSG = (
+    "Congratulations! Your model correctly proved that the "
+    "problem instance is unsatisfiable."
 )
 
 GRADER_LAPSE = (
@@ -134,42 +183,16 @@ class SolutionExercise(ModelInstance, Exercise):
         status = Status.from_output(raw, Method.MAXIMIZE)
         if status is Status.ERROR:
             logging.error(f"Submission contained the ERROR status")
-            return Feedback(
-                feedback=(
-                    "An error occurred while solving your model.\n\nEnsure that your "
-                    "model does not contain any elements that are not supported by "
-                    "the solver and check that your model returns no error message "
-                    "when running locally. If the problem persists, then please ask "
-                    "your course instructor for help."
-                )
-            )
+            return Feedback(feedback=SOLUTION_ERROR)
         elif status in [Status.UNBOUNDED, Status.UNSATISFIABLE]:
             logging.error(f"Submission contained the UNSAT/UNBOUNDED status")
             if self.UNSAT:
-                return Feedback(
-                    fractionalScore=1.0,
-                    feedback=(
-                        "Congratulations! Your model correctly proved that the "
-                        "problem instance is unsatisfiable."
-                    ),
-                )
+                return Feedback(fractionalScore=1.0, feedback=UNSAT_MSG,)
             else:
-                return Feedback(
-                    feedback=(
-                        "Your model reported the problem as unsatisfiable, but the "
-                        "problem is satisfiable.\n\nPlease ensure that your model "
-                        "contains only the constraints that are part of the model "
-                        "description."
-                    )
-                )
+                return Feedback(feedback=UNSAT_ERROR)
         elif status is Status.UNKNOWN:
             logging.error(f"Submission contained the UNKNOWN status")
-            return Feedback(
-                feedback=(
-                    "Your submission is unable to find a feasible "
-                    "solution to the problem within the set time limit."
-                ),
-            )
+            return Feedback(feedback=UNKNOWN_MSG,)
 
         logging.info(f"Submission contained the {status} status")
         # Split solutions
@@ -183,14 +206,7 @@ class SolutionExercise(ModelInstance, Exercise):
             sol.strip() for sol in raw.split(b"----------") if sol.strip() != b""
         ]
         if len(solutions) < 1:
-            return Feedback(
-                feedback=(
-                    "The found solution appears to be empty.\n\nCheck your "
-                    "output statement and make sure it meets the requirements of "
-                    "the assignment. If the problem persists, then please ask "
-                    "your course instructor for help. "
-                )
-            )
+            return Feedback(feedback=EMPTY_ERROR,)
 
         try:
             result = self.run_checker(
@@ -198,14 +214,7 @@ class SolutionExercise(ModelInstance, Exercise):
             )
         except MiniZincError as err:
             logging.error(f"An error occurred while running the checker:\n{err}")
-            return Feedback(
-                feedback=(
-                    "An error occurred while checking your solution.\n\nCheck your "
-                    "output statement and make sure it meets the requirements of the "
-                    "assignment. If the problem persists, then please ask your course "
-                    "instructor for help."
-                ),
-            )
+            return Feedback(feedback=OUTPUT_ERROR,)
 
         assert not (result["correct"] and self.UNSAT), GRADER_LAPSE
         return Feedback.from_dict(result)
@@ -228,15 +237,7 @@ class ModelExercise(Exercise):
                 logging.error(
                     f"An error occurred while running the model submission:\n{err}"
                 )
-                return Feedback(
-                    feedback=(
-                        "An error occurred while solving your "
-                        "model.\n\nPlease ensure that your MiniZinc model "
-                        "compiles correctly and works for all provided "
-                        "instances. If the problem persists, then please ask "
-                        "your course instructor for help."
-                    ),
-                )
+                return Feedback(feedback=MODEL_ERROR)
             assert isinstance(instance, CLIInstance)
 
             scores: List[float] = []
@@ -259,58 +260,28 @@ class ModelExercise(Exercise):
                     logging.error(
                         f"An error occurred while running the model submission:\n{err}"
                     )
-                    return Feedback(
-                        feedback=(
-                            "An error occurred while solving your "
-                            "model.\n\nPlease ensure that your MiniZinc model "
-                            "compiles correctly and works for all provided "
-                            "instances. If the problem persists, then please ask "
-                            "your course instructor for help."
-                        ),
-                    )
+                    return Feedback(feedback=MODEL_ERROR)
 
                 if result.status is Status.ERROR:
                     logging.error(
                         f"Submission with {inst.data} contained the ERROR status"
                     )
-                    return Feedback(
-                        feedback=(
-                            "An error occurred while solving your model.\n\nEnsure "
-                            "that your model does not contain any elements that are "
-                            "not supported by the solver and check that your model "
-                            "returns no error message when running locally. If the "
-                            "problem persists, then please ask your course instructor "
-                            "for help."
-                        )
-                    )
+                    return Feedback(feedback=MODEL_ERROR)
                 elif result.status in [Status.UNBOUNDED, Status.UNSATISFIABLE]:
                     logging.error(
                         f"Submission with {inst.data} returned the UNSAT/UNBOUNDED status"
                     )
                     if inst.UNSAT:
                         scores.append(1.0)
-                        feedback.append(
-                            "Congratulations! Your model correctly proved that the "
-                            "problem instance is unsatisfiable. "
-                        )
+                        feedback.append(UNSAT_MSG)
                     else:
-                        return Feedback(
-                            feedback=(
-                                "Your model reported the problem as unsatisfiable, but the "
-                                "problem is satisfiable.\n\nPlease ensure that your model "
-                                "contains only the constraints that are part of the model "
-                                "description."
-                            )
-                        )
+                        return Feedback(feedback=UNSAT_ERROR)
                 elif result.status is Status.UNKNOWN:
                     logging.error(
                         f"Submission with {inst.data} returned the UNKNOWN status"
                     )
                     scores.append(0.0)
-                    feedback.append(
-                        "Your submission is unable to find a feasible solution to the "
-                        "problem within the set time limit."
-                    )
+                    feedback.append(UNKNOWN_MSG)
                 else:
                     logging.info(
                         f"Submission with {inst.data} returned the {result.status} status"
@@ -328,15 +299,7 @@ class ModelExercise(Exercise):
                         logging.error(
                             f"An error occurred while running the checker:\n{err}"
                         )
-                        return Feedback(
-                            feedback=(
-                                "An error occurred while checking your "
-                                "solution.\n\nCheck your output statement and make "
-                                "sure it meets the requirements of the assignment. If "
-                                "the problem persists, then please ask your course "
-                                "instructor for help."
-                            ),
-                        )
+                        return Feedback(feedback=OUTPUT_ERROR,)
                     if not checked["correct"]:
                         logging.warning(
                             f"Solution checker reported errors! Stop grading"
