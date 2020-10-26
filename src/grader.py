@@ -82,7 +82,7 @@ GRADER_LAPSE = (
 @dataclass
 class Feedback:
     fractionalScore: float = 0.0
-    feedback: str = ERROR
+    feedback: str = GRADER_ERROR
 
     def serialise(self):
         return json.dumps(asdict(self))
