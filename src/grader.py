@@ -251,7 +251,9 @@ class ModelExercise(Exercise):
                         logging.info(
                             f"Running submitted model with data file `{inst.data}`"
                         )
-                        result = child.solve(timeout=self.timeout)
+                        result = child.solve(
+                            timeout=self.timeout, intermediate_solutions=True
+                        )
                 except minizinc.MiniZincError as err:
                     logging.error(
                         f"An error occurred while running the model submission:\n{err}"
@@ -287,8 +289,15 @@ class ModelExercise(Exercise):
                         f"Submission with {inst.data} returned the {result.status} status"
                     )
                     try:
-                        logging.debug(f"Checker output:\n{result.solution.check()}")
-                        checked = json.loads(result.solution.check())
+                        for solution in result.solution:
+                            logging.debug(f"Checker output:\n{solution.check()}")
+                            checked = json.loads(solution.check())
+
+                            if not checked.get("correct", True):
+                                logging.warning(f"Solution checker reported errors!")
+                                break
+                            else:
+                                assert not inst.UNSAT, GRADER_LAPSE
                     except (minizinc.MiniZincError, JSONDecodeError) as err:
                         logging.error(
                             f"An error occurred while running the checker:\n{err}"
@@ -296,10 +305,6 @@ class ModelExercise(Exercise):
                         scores.append(0.0)
                         feedback.append(OUTPUT_ERROR)
                         continue
-                    if not checked["correct"]:
-                        logging.warning(f"Solution checker reported errors!")
-                    else:
-                        assert not inst.UNSAT, GRADER_LAPSE
                     scores.append(checked["fractionalScore"])
                     feedback.append(checked["feedback"])
 
