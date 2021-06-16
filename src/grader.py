@@ -256,7 +256,8 @@ class ModelExercise(Exercise):
             for inst in self.instances:
                 try:
                     with instance.branch() as child:
-                        child.add_file(inst.data, parse_data=False)
+                        if inst.data is not None:
+                            child.add_file(inst.data, parse_data=False)
 
                         child.add_file(self.checker)
                         child.add_string("array[int] of float: thresholds;")
@@ -331,7 +332,11 @@ class ModelExercise(Exercise):
         feedback_str = "\n".join(
             [
                 "#### "
-                + self.instances[i].data.name.upper()
+                + (
+                    self.instances[i].data.name.upper()
+                    if self.instances[i].data is not None
+                    else self.name.upper()
+                )
                 + " - "
                 + str(int(scores[i] * 100))
                 + "% ####\n"
