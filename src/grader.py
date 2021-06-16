@@ -256,13 +256,16 @@ class ModelExercise(Exercise):
                     logging.error(
                         f"An error occurred while running the model submission:\n{err}"
                     )
-                    return Feedback(feedback=MODEL_ERROR)
+                    scores.append(0.0)
+                    feedback.append(MODEL_ERROR)
+                    continue
 
                 if result.status is minizinc.Status.ERROR:
                     logging.error(
                         f"Submission with {inst.data} contained the ERROR status"
                     )
-                    return Feedback(feedback=MODEL_ERROR)
+                    scores.append(0.0)
+                    feedback.append(MODEL_ERROR)
                 elif result.status in [minizinc.Status.UNBOUNDED, minizinc.Status.UNSATISFIABLE]:
                     logging.error(
                         f"Submission with {inst.data} returned the UNSAT/UNBOUNDED status"
@@ -271,7 +274,8 @@ class ModelExercise(Exercise):
                         scores.append(1.0)
                         feedback.append(UNSAT_MSG)
                     else:
-                        return Feedback(feedback=UNSAT_ERROR)
+                        scores.append(0.0)
+                        feedback.append(UNSAT_ERROR)
                 elif result.status is minizinc.Status.UNKNOWN:
                     logging.error(
                         f"Submission with {inst.data} returned the UNKNOWN status"
@@ -289,16 +293,15 @@ class ModelExercise(Exercise):
                         logging.error(
                             f"An error occurred while running the checker:\n{err}"
                         )
-                        return Feedback(feedback=OUTPUT_ERROR,)
+                        scores.append(0.0)
+                        feedback.append(OUTPUT_ERROR)
+                        continue
                     if not checked["correct"]:
-                        logging.warning(
-                            f"Solution checker reported errors! Stop grading"
-                        )
-                        return Feedback.from_dict(checked)
+                        logging.warning(f"Solution checker reported errors!")
                     else:
                         assert not inst.UNSAT, GRADER_LAPSE
-                        scores.append(checked["fractionalScore"])
-                        feedback.append(checked["feedback"])
+                    scores.append(checked["fractionalScore"])
+                    feedback.append(checked["feedback"])
 
         feedback_str = "\n".join(
             [
