@@ -228,6 +228,11 @@ class ModelExercise(Exercise):
 
     def grade(self, submission: Path) -> Feedback:
         logging.info(f"Grading model exercise `{self.name}`")
+
+        has_statistics_checker = self.has_statistics_checker()
+        if has_statistics_checker:
+            logging.info("Checker has statistics checker")
+
         with NamedTemporaryFile(prefix="submission", suffix=".mzn") as temp:
             model_file = Path(temp.name)
             model_file.write_bytes(submission.read_bytes())
@@ -314,6 +319,12 @@ class ModelExercise(Exercise):
                         scores.append(0.0)
                         feedback.append(OUTPUT_ERROR)
                         continue
+                    if has_statistics_checker and checked.get("correct", True):
+                        # Use final statistics check
+                        assert "statisticsCheck" in result.statistics, GRADER_LAPSE
+                        stat_check = result.statistics["statisticsCheck"]
+                        logging.debug(f"Statistics check output:\n{stat_check}")
+                        checked = json.loads(json.loads('"' + stat_check + '"'))
                     scores.append(checked["fractionalScore"])
                     feedback.append(checked["feedback"])
 
@@ -330,6 +341,18 @@ class ModelExercise(Exercise):
             ]
         )
         return Feedback(fractionalScore=mean(scores), feedback=feedback_str)
+
+    def has_statistics_checker(self) -> bool:
+        model = minizinc.Model()
+        model.add_string(Path(self.checker).read_text())
+        model.add_string(
+            "string: grader_has_statistics_check = checkStatistics(0, 0, 0, 0);"
+        )
+        try:
+            minizinc.Instance(minizinc.Solver.lookup("gecode"), model)
+        except minizinc.error.MiniZincTypeError as err:
+            return False
+        return True
 
 
 def lookup_exercise(conf: Path, id: str) -> Optional[Exercise]:
