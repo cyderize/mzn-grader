@@ -185,7 +185,9 @@ class SolutionExercise(ModelInstance, Exercise):
         status = minizinc.Status.from_output(raw, minizinc.Method.MAXIMIZE)
         if status is minizinc.Status.ERROR:
             logging.error(f"Submission contained the ERROR status")
-            return Feedback(feedback=SOLUTION_ERROR)
+            # Workaround for MiniZinc <= 2.5.5 on Windows giving ERROR status on timeout
+            if b"----------" not in raw:
+                return Feedback(feedback=SOLUTION_ERROR)
         elif status in [minizinc.Status.UNBOUNDED, minizinc.Status.UNSATISFIABLE]:
             logging.error(f"Submission contained the UNSAT/UNBOUNDED status")
             if self.UNSAT:
