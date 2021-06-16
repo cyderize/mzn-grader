@@ -98,6 +98,7 @@ class Exercise(ABC):
     checker: Path
     timeout: timedelta = timedelta(seconds=15)
     solver: str = "gecode"
+    param_file: Optional[Path] = None
 
     @staticmethod
     def from_dict(exercise: Dict[str, Any], parent: Dict[str, Any], sol_exercise: bool):
@@ -111,6 +112,8 @@ class Exercise(ABC):
         args["checker"] = (root / args["checker"]).absolute()
         if "timeout" in vals:
             args["timeout"] = timedelta(seconds=vals["timeout"])
+        if "param_file" in vals:
+            args["param_file"] = (root / vals["param_file"]).absolute()
 
         if sol_exercise:
             if "data" in vals:
@@ -141,6 +144,8 @@ class Exercise(ABC):
             solution.write_text(submission)
 
             instance = minizinc.Instance(solver)
+            if self.param_file is not None:
+                instance.add_file(self.param_file)
             instance.add_file(self.checker)
             if data is not None:
                 instance.add_file(data, parse_data=False)
@@ -224,12 +229,16 @@ class ModelExercise(Exercise):
     def grade(self, submission: Path) -> Feedback:
         logging.info(f"Grading model exercise `{self.name}`")
         with NamedTemporaryFile(prefix="submission", suffix=".mzn") as temp:
-            model = Path(temp.name)
-            model.write_bytes(submission.read_bytes())
+            model_file = Path(temp.name)
+            model_file.write_bytes(submission.read_bytes())
 
             solver = minizinc.Solver.lookup(self.solver)
             try:
-                instance = minizinc.Instance(solver, minizinc.Model(model))
+                model = minizinc.Model(model_file)
+                if self.param_file is not None:
+                    model.add_file(self.param_file)
+
+                instance = minizinc.Instance(solver, model)
             except minizinc.MiniZincError as err:
                 logging.error(
                     f"An error occurred while running the model submission:\n{err}"
