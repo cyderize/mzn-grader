@@ -367,7 +367,7 @@ def lookup_exercise(conf: Path, id: str) -> Optional[Exercise]:
     assert conf.exists()
     configuration = yaml.safe_load(conf.read_bytes())
 
-    reset = os.curdir
+    reset = os.getcwd()
     os.chdir(str(conf.parent))
     try:
         for assignment in configuration:
