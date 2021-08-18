@@ -247,10 +247,9 @@ class ModelExercise(Exercise):
                     with instance.branch() as child:
                         child.add_file(inst.data, parse_data=False)
 
-                        if "_output_item" not in child.output:
-                            child.add_file(self.checker)
-                            child.add_string("array[int] of float: thresholds;")
-                            child["thresholds"] = inst.thresholds
+                        child.add_file(self.checker)
+                        child.add_string("array[int] of float: thresholds;")
+                        child["thresholds"] = inst.thresholds
 
                         logging.info(
                             f"Running submitted model with data file `{inst.data}`"
@@ -287,14 +286,8 @@ class ModelExercise(Exercise):
                         f"Submission with {inst.data} returned the {result.status} status"
                     )
                     try:
-                        if "_output_item" in instance.output:
-                            solution = str(result.solution)
-                            checked = self.run_checker(
-                                solution, inst.data, inst.thresholds
-                            )
-                        else:
-                            logging.debug(f"Checker output:\n{result.solution.check()}")
-                            checked = json.loads(result.solution.check())
+                        logging.debug(f"Checker output:\n{result.solution.check()}")
+                        checked = json.loads(result.solution.check())
                     except (MiniZincError, JSONDecodeError) as err:
                         logging.error(
                             f"An error occurred while running the checker:\n{err}"
