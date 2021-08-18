@@ -84,7 +84,7 @@ class Feedback:
     fractionalScore: float = 0.0
     feedback: str = GRADER_ERROR
 
-    def serialise(self):
+    def serialise(self) -> str:
         return json.dumps(asdict(self))
 
     @classmethod
@@ -354,39 +354,23 @@ if __name__ == "__main__":
     logging.info(f"Grader started: {str(sys.argv)}")
     feedback = Feedback()
     try:
-        # Initialise grader from command line (Coursera submission format)
-        user: str = ""
-        filename: str = ""
+        # Default location for the submission to be placed.
         location: Path = Path("/shared/submission/submission.sub")
-        partID: str
-
-        for i in range(len(sys.argv)):
-            if sys.argv[i] == "userId":
-                user = sys.argv[i + 1]
-            elif sys.argv[i] == "filename":
-                filename = sys.argv[i + 1]
-            elif sys.argv[i] == "override_sub":
-                location = Path(sys.argv[i + 1])
-            elif sys.argv[i] == "partId":
-                partID = sys.argv[i + 1]
-
-        logging.info("Submission information:")
-        logging.info(f"> User: {user}")
-        logging.info(f"> Filename: {filename}")
-        logging.info(f"> Location: {location}")
-        logging.info(f"> partID: {partID}")
+        # The Coursera partId is set through an environmental variable.
+        partId: str = os.environ['partId']
+        logging.info(f"Submission partId: {partId}")
 
         # Lookup exercise in library
         exercise = lookup_exercise(
-            Path(os.environ.get("GRADER_LIB", "./assignments.yaml")), partID
+            Path(os.environ.get("GRADER_LIB", "./assignments.yaml")), partId
         )
         if exercise is None:
-            logging.error(f"Exercise {partID} could not be located")
+            logging.error(f"Exercise {partId} could not be located")
         else:
             # Grade assignment
-            logging.info(f"Exercise {partID} parsed as: {exercise}")
+            logging.info(f"Exercise {partId} parsed as: {exercise}")
             feedback = exercise.grade(location)
 
     finally:
         logging.info("Output feedback: " + feedback.serialise())
-        print(feedback.serialise())
+        Path("/shared/feedback.json").write_text(feedback.serialise())
