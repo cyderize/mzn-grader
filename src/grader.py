@@ -350,18 +350,18 @@ if __name__ == "__main__":
         # Default location for the submission to be placed.
         location: Path = Path("/shared/submission/submission.sub")
         # The Coursera partId is set through an environmental variable.
-        partId: str = os.environ['partId']
-        logging.info(f"Submission partId: {partId}")
+        part_id: str = os.environ['partId']
+        logging.info(f"Submission partId: {part_id}")
 
         # Lookup exercise in library
         exercise = lookup_exercise(
-            Path(os.environ.get("GRADER_LIB", "./assignments.yaml")), partId
+            Path(os.environ.get("GRADER_LIB", "./assignments.yaml")), part_id
         )
         if exercise is None:
-            logging.error(f"Exercise {partId} could not be located")
+            logging.error(f"Exercise {part_id} could not be located")
         else:
             # Grade assignment
-            logging.info(f"Exercise {partId} parsed as: {exercise}")
+            logging.info(f"Exercise {part_id} parsed as: {exercise}")
             feedback = exercise.grade(location)
 
     finally:
