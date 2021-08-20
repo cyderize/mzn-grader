@@ -13,9 +13,7 @@ from statistics import mean
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, List, Optional
 
-from minizinc import Instance, Method, MiniZincError, Model, Solver, Status
-from minizinc.CLI import CLIInstance
-
+import minizinc
 
 EMPTY_ERROR = (
     "The found solution appears to be empty.\n\nCheck your "
@@ -137,12 +135,12 @@ class Exercise(ABC):
         self, submission: str, data: Optional[Path], thresholds: Optional[List[float]]
     ) -> Dict[str, Any]:
         logging.info(f"Run {self.checker} with solution data:\n{submission}")
-        solver = Solver.lookup("gecode")
+        solver = minizinc.Solver.lookup("gecode")
         with NamedTemporaryFile(prefix="submission", suffix=".dzn") as temp:
             solution = Path(temp.name)
             solution.write_text(submission)
 
-            instance = Instance(solver)
+            instance = minizinc.Instance(solver)
             instance.add_file(self.checker)
             if data is not None:
                 instance.add_file(data, parse_data=False)
@@ -152,9 +150,9 @@ class Exercise(ABC):
 
             result = instance.solve(timeout=self.timeout)
             assert result.status in [
-                Status.SATISFIED,
-                Status.ALL_SOLUTIONS,
-                Status.OPTIMAL_SOLUTION,
+                minizinc.Status.SATISFIED,
+                minizinc.Status.ALL_SOLUTIONS,
+                minizinc.Status.OPTIMAL_SOLUTION,
             ]
 
             logging.debug(f"Checker output:\n{str(result)}")
@@ -180,17 +178,17 @@ class SolutionExercise(ModelInstance, Exercise):
         raw = submission.read_bytes()
 
         # Check status
-        status = Status.from_output(raw, Method.MAXIMIZE)
-        if status is Status.ERROR:
+        status = minizinc.Status.from_output(raw, minizinc.Method.MAXIMIZE)
+        if status is minizinc.Status.ERROR:
             logging.error(f"Submission contained the ERROR status")
             return Feedback(feedback=SOLUTION_ERROR)
-        elif status in [Status.UNBOUNDED, Status.UNSATISFIABLE]:
+        elif status in [minizinc.Status.UNBOUNDED, minizinc.Status.UNSATISFIABLE]:
             logging.error(f"Submission contained the UNSAT/UNBOUNDED status")
             if self.UNSAT:
                 return Feedback(fractionalScore=1.0, feedback=UNSAT_MSG,)
             else:
                 return Feedback(feedback=UNSAT_ERROR)
-        elif status is Status.UNKNOWN:
+        elif status is minizinc.Status.UNKNOWN:
             logging.error(f"Submission contained the UNKNOWN status")
             return Feedback(feedback=UNKNOWN_MSG,)
 
@@ -212,7 +210,7 @@ class SolutionExercise(ModelInstance, Exercise):
             result = self.run_checker(
                 solutions[-1].decode(), self.data, self.thresholds
             )
-        except MiniZincError as err:
+        except minizinc.MiniZincError as err:
             logging.error(f"An error occurred while running the checker:\n{err}")
             return Feedback(feedback=OUTPUT_ERROR,)
 
@@ -230,15 +228,15 @@ class ModelExercise(Exercise):
             model = Path(temp.name)
             model.write_bytes(submission.read_bytes())
 
-            solver = Solver.lookup(self.solver)
+            solver = minizinc.Solver.lookup(self.solver)
             try:
-                instance = Instance(solver, Model(model))
-            except MiniZincError as err:
+                instance = minizinc.Instance(solver, minizinc.Model(model))
+            except minizinc.MiniZincError as err:
                 logging.error(
                     f"An error occurred while running the model submission:\n{err}"
                 )
                 return Feedback(feedback=MODEL_ERROR)
-            assert isinstance(instance, CLIInstance)
+            assert isinstance(instance, minizinc.CLI.CLIInstance)
 
             scores: List[float] = []
             feedback: List[str] = []
@@ -255,18 +253,18 @@ class ModelExercise(Exercise):
                             f"Running submitted model with data file `{inst.data}`"
                         )
                         result = child.solve(timeout=self.timeout)
-                except MiniZincError as err:
+                except minizinc.MiniZincError as err:
                     logging.error(
                         f"An error occurred while running the model submission:\n{err}"
                     )
                     return Feedback(feedback=MODEL_ERROR)
 
-                if result.status is Status.ERROR:
+                if result.status is minizinc.Status.ERROR:
                     logging.error(
                         f"Submission with {inst.data} contained the ERROR status"
                     )
                     return Feedback(feedback=MODEL_ERROR)
-                elif result.status in [Status.UNBOUNDED, Status.UNSATISFIABLE]:
+                elif result.status in [minizinc.Status.UNBOUNDED, minizinc.Status.UNSATISFIABLE]:
                     logging.error(
                         f"Submission with {inst.data} returned the UNSAT/UNBOUNDED status"
                     )
@@ -275,7 +273,7 @@ class ModelExercise(Exercise):
                         feedback.append(UNSAT_MSG)
                     else:
                         return Feedback(feedback=UNSAT_ERROR)
-                elif result.status is Status.UNKNOWN:
+                elif result.status is minizinc.Status.UNKNOWN:
                     logging.error(
                         f"Submission with {inst.data} returned the UNKNOWN status"
                     )
@@ -288,7 +286,7 @@ class ModelExercise(Exercise):
                     try:
                         logging.debug(f"Checker output:\n{result.solution.check()}")
                         checked = json.loads(result.solution.check())
-                    except (MiniZincError, JSONDecodeError) as err:
+                    except (minizinc.MiniZincError, JSONDecodeError) as err:
                         logging.error(
                             f"An error occurred while running the checker:\n{err}"
                         )
