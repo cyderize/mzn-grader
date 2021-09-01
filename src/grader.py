@@ -144,8 +144,7 @@ class Exercise(ABC):
             instance.add_file(self.checker)
             if data is not None:
                 instance.add_file(data, parse_data=False)
-            if thresholds is not None:
-                instance["thresholds"] = thresholds
+            instance["thresholds"] = thresholds if thresholds is not None else []
             instance.add_file(solution, parse_data=False)
 
             result = instance.solve(timeout=self.timeout)
@@ -247,7 +246,7 @@ class ModelExercise(Exercise):
 
                         child.add_file(self.checker)
                         child.add_string("array[int] of float: thresholds;")
-                        child["thresholds"] = inst.thresholds
+                        child["thresholds"] = inst.thresholds if inst.thresholds is not None else []
 
                         logging.info(
                             f"Running submitted model with data file `{inst.data}`"
