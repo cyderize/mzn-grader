@@ -235,7 +235,9 @@ class ModelExercise(Exercise):
         if has_statistics_checker:
             logging.info("Checker has statistics checker")
 
-        with NamedTemporaryFile(prefix="submission", suffix=".mzn") as temp:
+        with NamedTemporaryFile(
+            prefix="submission", suffix=".mzn", dir=self.checker.parent
+        ) as temp:
             model_file = Path(temp.name)
             model_file.write_bytes(submission.read_bytes())
 
