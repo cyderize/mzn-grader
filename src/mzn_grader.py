@@ -388,7 +388,7 @@ def lookup_exercise(conf: Path, id: str) -> Optional[Exercise]:
         os.chdir(reset)
 
 
-if __name__ == "__main__":
+def coursera():
     logging.basicConfig(level=logging.DEBUG)
     logging.info(f"Grader started: {str(sys.argv)}")
     feedback = Feedback()
