@@ -53,12 +53,11 @@ UNSAT_ERROR = (
     "description."
 )
 
-OUTPUT_ERROR = (
-    "An error occurred while checking your "
-    "solution.\n\nCheck your output statement and make "
-    "sure it meets the requirements of the assignment. If "
-    "the problem persists, then please ask your course "
-    "instructor for help."
+INPUT_ERROR = (
+    "An error occurred while checking your solution.\n\nPlease "
+    "ensure your assignment has been submitted correctly using the "
+    "provided checker or output statement. If the problem persists, "
+    "then please ask your course instructor for help."
 )
 
 UNKNOWN_MSG = (
@@ -191,12 +190,17 @@ class SolutionExercise(ModelInstance, Exercise):
         elif status in [minizinc.Status.UNBOUNDED, minizinc.Status.UNSATISFIABLE]:
             logging.error(f"Submission contained the UNSAT/UNBOUNDED status")
             if self.UNSAT:
-                return Feedback(fractionalScore=1.0, feedback=UNSAT_MSG,)
+                return Feedback(
+                    fractionalScore=1.0,
+                    feedback=UNSAT_MSG,
+                )
             else:
                 return Feedback(feedback=UNSAT_ERROR)
         elif status is minizinc.Status.UNKNOWN:
             logging.error(f"Submission contained the UNKNOWN status")
-            return Feedback(feedback=UNKNOWN_MSG,)
+            return Feedback(
+                feedback=UNKNOWN_MSG,
+            )
 
         logging.info(f"Submission contained the {status} status")
         # Split solutions
@@ -210,7 +214,9 @@ class SolutionExercise(ModelInstance, Exercise):
             sol.strip() for sol in raw.split(b"----------") if sol.strip() != b""
         ]
         if len(solutions) < 1:
-            return Feedback(feedback=EMPTY_ERROR,)
+            return Feedback(
+                feedback=EMPTY_ERROR,
+            )
 
         try:
             result = self.run_checker(
@@ -218,7 +224,9 @@ class SolutionExercise(ModelInstance, Exercise):
             )
         except minizinc.MiniZincError as err:
             logging.error(f"An error occurred while running the checker:\n{err}")
-            return Feedback(feedback=OUTPUT_ERROR,)
+            return Feedback(
+                feedback=INPUT_ERROR,
+            )
 
         assert not (result["correct"] and self.UNSAT), GRADER_LAPSE
         return Feedback.from_dict(result)
@@ -265,7 +273,9 @@ class ModelExercise(Exercise):
 
                         child.add_file(self.checker)
                         child.add_string("array[int] of float: thresholds;")
-                        child["thresholds"] = inst.thresholds if inst.thresholds is not None else []
+                        child["thresholds"] = (
+                            inst.thresholds if inst.thresholds is not None else []
+                        )
 
                         logging.info(
                             f"Running submitted model with data file `{inst.data}`"
@@ -287,7 +297,10 @@ class ModelExercise(Exercise):
                     )
                     scores.append(0.0)
                     feedback.append(MODEL_ERROR)
-                elif result.status in [minizinc.Status.UNBOUNDED, minizinc.Status.UNSATISFIABLE]:
+                elif result.status in [
+                    minizinc.Status.UNBOUNDED,
+                    minizinc.Status.UNSATISFIABLE,
+                ]:
                     logging.error(
                         f"Submission with {inst.data} returned the UNSAT/UNBOUNDED status"
                     )
@@ -322,7 +335,7 @@ class ModelExercise(Exercise):
                             f"An error occurred while running the checker:\n{err}"
                         )
                         scores.append(0.0)
-                        feedback.append(OUTPUT_ERROR)
+                        feedback.append(INPUT_ERROR)
                         continue
                     if has_statistics_checker and checked.get("correct", True):
                         # Use final statistics check
@@ -396,7 +409,7 @@ def coursera():
         # Default location for the submission to be placed.
         location: Path = Path("/shared/submission/submission.sub")
         # The Coursera partId is set through an environmental variable.
-        part_id: str = os.environ['partId']
+        part_id: str = os.environ["partId"]
         logging.info(f"Submission partId: {part_id}")
 
         # Lookup exercise in library
