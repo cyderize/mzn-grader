@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mzn-grader"
-version = "1.0.0"
+version = "1.0.1"
 description = "A MOOC grading executable and library for MiniZinc modelling courses"
 authors = ["Jip J. Dekker <jip@dekker.one>"]
 license = "MPL-2.0"
@@ -8,7 +8,7 @@ license = "MPL-2.0"
 [tool.poetry.dependencies]
 python = "^3.6.2"
 dataclasses = { version = "^0.6", python = "<3.7" }
-minizinc = "^0.4"
+minizinc = "*"
 pyyaml = "^5.4"
 
 [tool.poetry.dev-dependencies]
