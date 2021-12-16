@@ -372,7 +372,7 @@ class ModelExercise(Exercise):
         )
         try:
             minizinc.Instance(minizinc.Solver.lookup("gecode"), model)
-        except minizinc.error.MiniZincTypeError as err:
+        except minizinc.error.MiniZincError as err:
             return False
         return True
 
