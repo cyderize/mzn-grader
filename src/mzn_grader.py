@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
+import base64
 import json
 import logging
 import os
 import re
 import sys
+import zlib
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field, fields
 from datetime import timedelta
@@ -73,6 +74,11 @@ UNSAT_MSG = (
 GRADER_LAPSE = (
     "The grader marked a solution for this instance as correct, but it was marked as "
     "unsatisfiable. "
+)
+
+GRADER_CHECKER_LAPSE = (
+    "The grader appears to have a definition for a checkStatistics function, but no "
+    "statisticsCheck field was found."
 )
 
 
@@ -339,7 +345,9 @@ class ModelExercise(Exercise):
                         continue
                     if has_statistics_checker and checked.get("correct", True):
                         # Use final statistics check
-                        assert "statisticsCheck" in result.statistics, GRADER_LAPSE
+                        assert (
+                            "statisticsCheck" in result.statistics
+                        ), GRADER_CHECKER_LAPSE
                         stat_check = result.statistics["statisticsCheck"]
                         logging.debug(f"Statistics check output:\n{stat_check}")
                         checked = json.loads(json.loads('"' + stat_check + '"'))
@@ -366,13 +374,17 @@ class ModelExercise(Exercise):
 
     def has_statistics_checker(self) -> bool:
         model = minizinc.Model()
-        model.add_string(Path(self.checker).read_text())
+        checker = Path(self.checker)
+        text = checker.read_text()
+        if self.checker.suffix == ".mzc":
+            text = zlib.decompress(base64.b64decode(text)).decode()
+        model.add_string(text)
         model.add_string(
             "string: grader_has_statistics_check = checkStatistics(0, 0, 0, 0);"
         )
         try:
             minizinc.Instance(minizinc.Solver.lookup("gecode"), model)
-        except minizinc.error.MiniZincError as err:
+        except minizinc.MiniZincError as err:
             return False
         return True
 
