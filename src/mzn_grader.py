@@ -143,8 +143,18 @@ class Exercise(ABC):
         self, submission: str, data: Optional[Path], thresholds: Optional[List[float]]
     ) -> Dict[str, Any]:
         logging.info(f"Run {self.checker} with solution data:\n{submission}")
+        # Check whether submission is JSON
+        is_json = False
+        try:
+            _ = json.loads(submission)
+            is_json = True
+        except JSONDecodeError:
+            pass
+
         solver = minizinc.Solver.lookup("gecode")
-        with NamedTemporaryFile(prefix="submission", suffix=".dzn") as temp:
+        with NamedTemporaryFile(
+            prefix="submission", suffix=".json" if is_json else ".dzn"
+        ) as temp:
             solution = Path(temp.name)
             solution.write_text(submission)
 
