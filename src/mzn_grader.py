@@ -86,9 +86,10 @@ GRADER_CHECKER_LAPSE = (
 class Feedback:
     fractionalScore: float = 0.0
     feedback: str = GRADER_ERROR
+    extra: Optional[Any] = None
 
     def serialise(self) -> str:
-        return json.dumps(asdict(self))
+        return json.dumps({k: v for k, v in asdict(self).items() if v is not None})
 
     @classmethod
     def from_dict(cls, env):
