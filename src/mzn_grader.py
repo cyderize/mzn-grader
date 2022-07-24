@@ -361,7 +361,7 @@ class ModelExercise(Exercise):
                         ), GRADER_CHECKER_LAPSE
                         stat_check = result.statistics["statisticsCheck"]
                         logging.debug(f"Statistics check output:\n{stat_check}")
-                        checked = json.loads(json.loads('"' + stat_check + '"'))
+                        checked = json.loads(json.loads(stat_check)["output"]["default"])
                     scores.append(checked["fractionalScore"])
                     feedback.append(checked["feedback"])
 
