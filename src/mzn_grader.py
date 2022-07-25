@@ -322,8 +322,19 @@ class ModelExercise(Exercise):
                         f"Submission with {inst.data} returned the UNSAT/UNBOUNDED status"
                     )
                     if inst.UNSAT:
-                        scores.append(1.0)
-                        feedback.append(UNSAT_MSG)
+                        if has_statistics_checker:
+                            # Use final statistics check
+                            assert (
+                                "statisticsCheck" in result.statistics
+                            ), GRADER_CHECKER_LAPSE
+                            stat_check = result.statistics["statisticsCheck"]
+                            logging.debug(f"Statistics check output:\n{stat_check}")
+                            checked = json.loads(json.loads(stat_check)["output"]["default"])
+                            scores.append(checked["fractionalScore"])
+                            feedback.append(checked["feedback"])
+                        else:
+                            scores.append(1.0)
+                            feedback.append(UNSAT_MSG)
                     else:
                         scores.append(0.0)
                         feedback.append(UNSAT_ERROR)
