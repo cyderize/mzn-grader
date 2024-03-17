@@ -278,7 +278,7 @@ class ModelExercise(Exercise):
                     f"An error occurred while running the model submission:\n{err}"
                 )
                 return Feedback(feedback=MODEL_ERROR)
-            assert isinstance(instance, minizinc.CLI.CLIInstance)
+            assert isinstance(instance, minizinc.Instance)
 
             scores: List[float] = []
             feedback: List[str] = []
@@ -339,8 +339,8 @@ class ModelExercise(Exercise):
                     )
                     try:
                         for solution in result.solution:
-                            logging.debug(f"Checker output:\n{solution.check()}")
-                            checked = json.loads(solution.check())
+                            logging.debug(f"Checker output:\n{solution._checker}")
+                            checked = json.loads(solution._checker)
 
                             if not checked.get("correct", True):
                                 logging.warning(f"Solution checker reported errors!")
