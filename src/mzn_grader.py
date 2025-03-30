@@ -245,6 +245,22 @@ class SolutionExercise(ModelInstance, Exercise):
                 feedback=INPUT_ERROR,
             )
 
+        if self.thresholds is not None and len(self.thresholds) > 1:
+            tlen = len(self.thresholds)
+            first_idx = self.thresholds.index(self.thresholds[-1])
+            if first_idx < tlen - 1:
+                # Repeated final threshold means optimality proof required
+                logging.info(f"Requires optimality proof for full marks")
+                if status != minizinc.Status.OPTIMAL_SOLUTION:
+                    # Requires optimality for full marks
+                    max_score = (first_idx + 1) / tlen
+                    logging.info(
+                        f"Capping score of {result['fractionalScore']} to at most {max_score} due to non-optimal status"
+                    )
+                    result["fractionalScore"] = min(
+                        max_score, result["fractionalScore"]
+                    )
+
         assert not (result["correct"] and self.UNSAT), GRADER_LAPSE
         return Feedback.from_dict(result)
 
@@ -362,7 +378,20 @@ class ModelExercise(Exercise):
                         stat_check = result.statistics["statisticsCheck"]
                         logging.debug(f"Statistics check output:\n{stat_check}")
                         checked = json.loads(json.loads('"' + stat_check + '"'))
-                    scores.append(checked["fractionalScore"])
+                    score = checked["fractionalScore"]
+                    if inst.thresholds is not None and len(inst.thresholds) > 1:
+                        tlen = len(inst.thresholds)
+                        first_idx = inst.thresholds.index(inst.thresholds[-1])
+                        if first_idx < tlen - 1:
+                            # Repeated final threshold means optimality proof required
+                            logging.info(f"Requires optimality proof for full marks")
+                            if result.status != minizinc.Status.OPTIMAL_SOLUTION:
+                                max_score = (first_idx + 1) / tlen
+                                logging.info(
+                                    f"Capping score of {score} to at most {max_score} due to non-optimal status"
+                                )
+                                score = min(max_score, score)
+                    scores.append(score)
                     feedback.append(checked["feedback"])
 
         feedback_str = "\n".join(
