@@ -316,6 +316,7 @@ class ModelExercise(Exercise):
                         result = child.solve(
                             timeout=self.timeout, intermediate_solutions=True
                         )
+                        logging.info(f"Statistics: {result.statistics}")
                 except minizinc.MiniZincError as err:
                     logging.error(
                         f"An error occurred while running the model submission:\n{err}"
