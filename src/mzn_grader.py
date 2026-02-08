@@ -247,7 +247,12 @@ class SolutionExercise(ModelInstance, Exercise):
 
         if self.thresholds is not None and len(self.thresholds) > 1:
             tlen = len(self.thresholds)
-            first_idx = self.thresholds.index(self.thresholds[-1])
+            first_idx = tlen - 1
+            while first_idx > 0:
+                if self.thresholds[first_idx - 1] != self.thresholds[-1]:
+                    break
+                first_idx -= 1
+
             if first_idx < tlen - 1:
                 # Repeated final threshold means optimality proof required
                 logging.info(f"Requires optimality proof for full marks")
@@ -382,7 +387,11 @@ class ModelExercise(Exercise):
                     score = checked["fractionalScore"]
                     if inst.thresholds is not None and len(inst.thresholds) > 1:
                         tlen = len(inst.thresholds)
-                        first_idx = inst.thresholds.index(inst.thresholds[-1])
+                        first_idx = tlen - 1
+                        while first_idx > 0:
+                            if inst.thresholds[first_idx - 1] != inst.thresholds[-1]:
+                                break
+                            first_idx -= 1
                         if first_idx < tlen - 1:
                             # Repeated final threshold means optimality proof required
                             logging.info(f"Requires optimality proof for full marks")
